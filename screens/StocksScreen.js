@@ -1,15 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
 import { useStocks } from '../hooks/useStocks';
 
 // Remove dummy data - now using real API data
 
-const StockCard = ({ stock }) => {
+const StockCard = ({ stock, onPress }) => {
   const isGainer = stock.change && !stock.change.startsWith('-');
   const changeColor = isGainer ? '#00C851' : '#FF4444';
   
   return (
-    <TouchableOpacity style={styles.stockCard}>
+    <TouchableOpacity style={styles.stockCard} onPress={() => onPress(stock)}>
       <View style={styles.stockIcon} />
       <Text style={styles.stockName} numberOfLines={1}>{stock.name}</Text>
       <Text style={styles.stockPrice}>{stock.price}</Text>
@@ -31,11 +31,34 @@ const SectionHeader = ({ title, onViewAll }) => (
   </View>
 );
 
-export default function StocksScreen() {
+export default function StocksScreen({ navigation }) {
   const { stocks, loading, error, lastUpdated, refreshStocks } = useStocks();
 
+  useEffect(() => {
+    navigation.setOptions({
+      title: 'Stocks',
+      headerStyle: {
+        backgroundColor: '#00D09C',
+      },
+      headerTintColor: '#fff',
+      headerTitleStyle: {
+        fontWeight: 'bold',
+        fontSize: 18,
+      },
+      headerShown: true,
+    });
+  }, [navigation]);
+
   const handleViewAll = (section) => {
-    console.log(`View all ${section}`);
+    navigation.navigate('StockList', { type: section });
+  };
+
+  const handleStockPress = (stock) => {
+    navigation.navigate('CompanyOverview', {
+      symbol: stock.ticker,
+      currentPrice: stock.price,
+      change: stock.change,
+    });
   };
 
   if (loading) {
@@ -80,7 +103,7 @@ export default function StocksScreen() {
       />
       <View style={styles.stockGrid}>
         {stocks.topGainers.slice(0, 4).map((stock) => (
-          <StockCard key={stock.id} stock={stock} />
+          <StockCard key={stock.id} stock={stock} onPress={handleStockPress} />
         ))}
       </View>
 
@@ -91,7 +114,7 @@ export default function StocksScreen() {
       />
       <View style={styles.stockGrid}>
         {stocks.topLosers.slice(0, 4).map((stock) => (
-          <StockCard key={stock.id} stock={stock} />
+          <StockCard key={stock.id} stock={stock} onPress={handleStockPress} />
         ))}
       </View>
     </ScrollView>

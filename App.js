@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
-import StocksScreen from './screens/StocksScreen';
+import StocksStackNavigator from './navigation/StocksStackNavigator';
 import WishlistScreen from './screens/WishlistScreen';
 
 const Tab = createBottomTabNavigator();
@@ -47,9 +47,10 @@ export default function App() {
       >
         <Tab.Screen 
           name="Stocks" 
-          component={StocksScreen}
+          component={StocksStackNavigator}
           options={{
             title: 'Stocks',
+            headerShown: false, // Let the stack navigator handle headers
           }}
         />
         <Tab.Screen 

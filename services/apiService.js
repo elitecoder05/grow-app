@@ -87,6 +87,15 @@ class ApiService {
   async getTopGainersLosers() {
     return this.makeRequest(API_CONFIG.ENDPOINTS.TOP_GAINERS_LOSERS);
   }
+
+  /**
+   * Get company overview by symbol
+   * @param {string} symbol - Stock symbol
+   * @returns {Promise} - Company overview data
+   */
+  async getCompanyOverview(symbol) {
+    return this.makeRequest(API_CONFIG.ENDPOINTS.COMPANY_OVERVIEW, { symbol });
+  }
 }
 
 // Export singleton instance
