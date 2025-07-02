@@ -96,6 +96,50 @@ class ApiService {
   async getCompanyOverview(symbol) {
     return this.makeRequest(API_CONFIG.ENDPOINTS.COMPANY_OVERVIEW, { symbol });
   }
+
+  /**
+   * Get daily time series data
+   * @param {string} symbol - Stock symbol
+   * @param {string} outputsize - 'compact' (last 100 days) or 'full' (20+ years)
+   * @returns {Promise} - Time series data
+   */
+  async getDailyTimeSeries(symbol, outputsize = 'compact') {
+    return this.makeRequest(API_CONFIG.ENDPOINTS.TIME_SERIES_DAILY, { 
+      symbol, 
+      outputsize 
+    });
+  }
+
+  /**
+   * Get weekly time series data
+   * @param {string} symbol - Stock symbol
+   * @returns {Promise} - Weekly time series data
+   */
+  async getWeeklyTimeSeries(symbol) {
+    return this.makeRequest(API_CONFIG.ENDPOINTS.TIME_SERIES_WEEKLY, { symbol });
+  }
+
+  /**
+   * Get monthly time series data
+   * @param {string} symbol - Stock symbol
+   * @returns {Promise} - Monthly time series data
+   */
+  async getMonthlyTimeSeries(symbol) {
+    return this.makeRequest(API_CONFIG.ENDPOINTS.TIME_SERIES_MONTHLY, { symbol });
+  }
+
+  /**
+   * Get intraday time series data
+   * @param {string} symbol - Stock symbol
+   * @param {string} interval - '1min', '5min', '15min', '30min', '60min'
+   * @returns {Promise} - Intraday time series data
+   */
+  async getIntradayTimeSeries(symbol, interval = '60min') {
+    return this.makeRequest(API_CONFIG.ENDPOINTS.TIME_SERIES_INTRADAY, { 
+      symbol, 
+      interval 
+    });
+  }
 }
 
 // Export singleton instance

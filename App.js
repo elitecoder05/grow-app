@@ -6,13 +6,15 @@ import { Ionicons } from '@expo/vector-icons';
 
 import StocksStackNavigator from './navigation/StocksStackNavigator';
 import WishlistScreen from './screens/WishlistScreen';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const Tab = createBottomTabNavigator();
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <Tab.Navigator
+    <ErrorBoundary>
+      <NavigationContainer>
+        <Tab.Navigator
         screenOptions={({ route }) => ({
           tabBarIcon: ({ focused, color, size }) => {
             let iconName;
@@ -63,5 +65,6 @@ export default function App() {
       </Tab.Navigator>
       <StatusBar style="light" />
     </NavigationContainer>
+    </ErrorBoundary>
   );
 }

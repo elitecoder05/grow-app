@@ -7,9 +7,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCompanyOverview } from '../hooks/useCompanyOverview';
+import { useStockChart } from '../hooks/useStockChart';
+import SimpleLineChart from '../components/SimpleLineChart';
 
 const { width } = Dimensions.get('window');
 
@@ -34,28 +37,99 @@ const TagButton = ({ text, color = '#e3f2fd' }) => (
   </View>
 );
 
+const PeriodButton = ({ period, isSelected, onPress }) => (
+  <TouchableOpacity
+    style={[styles.periodButton, isSelected && styles.selectedPeriodButton]}
+    onPress={() => onPress(period)}
+  >
+    <Text style={[
+      styles.periodButtonText,
+      isSelected && styles.selectedPeriodButtonText
+    ]}>
+      {period}
+    </Text>
+  </TouchableOpacity>
+);
+
 export default function CompanyOverviewScreen({ route, navigation }) {
   const { symbol, currentPrice, change } = route.params;
   const { companyData, loading, error, refreshData } = useCompanyOverview(symbol);
+  const { chartData, loading: chartLoading, error: chartError, selectedPeriod, changePeriod, refreshData: refreshChart } = useStockChart(symbol);
   const [isWishlisted, setIsWishlisted] = useState(false);
+
+  const periods = ['1W', '1M', '3M', '6M', '1Y', '5Y'];
 
   useEffect(() => {
     navigation.setOptions({
       title: 'Details Screen',
       headerRight: () => (
-        <TouchableOpacity
-          style={styles.wishlistButton}
-          onPress={() => setIsWishlisted(!isWishlisted)}
-        >
-          <Ionicons
-            name={isWishlisted ? 'bookmark' : 'bookmark-outline'}
-            size={24}
-            color="#fff"
-          />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={handleRefresh}
+          >
+            <Ionicons name="refresh" size={20} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.wishlistButton}
+            onPress={() => setIsWishlisted(!isWishlisted)}
+          >
+            <Ionicons
+              name={isWishlisted ? 'bookmark' : 'bookmark-outline'}
+              size={24}
+              color="#fff"
+            />
+          </TouchableOpacity>
+        </View>
       ),
     });
   }, [navigation, isWishlisted]);
+
+  const handleRefresh = () => {
+    refreshData();
+    refreshChart();
+  };
+
+  const renderChart = () => {
+    if (chartLoading) {
+      return (
+        <View style={styles.chartLoadingContainer}>
+          <ActivityIndicator size="large" color="#00D09C" />
+          <Text style={styles.chartLoadingText}>Loading chart data...</Text>
+        </View>
+      );
+    }
+
+    if (chartError) {
+      return (
+        <View style={styles.chartErrorContainer}>
+          <Ionicons name="bar-chart-outline" size={40} color="#FF4444" />
+          <Text style={styles.chartErrorText}>Unable to load chart</Text>
+          <Text style={styles.chartErrorSubtext}>{chartError}</Text>
+          <TouchableOpacity style={styles.chartRetryButton} onPress={refreshChart}>
+            <Text style={styles.chartRetryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (!chartData || !chartData.rawData || chartData.rawData.length === 0) {
+      return (
+        <View style={styles.chartPlaceholder}>
+          <Ionicons name="trending-up" size={40} color="#ccc" />
+          <Text style={styles.chartPlaceholderText}>No chart data available</Text>
+        </View>
+      );
+    }
+
+    return (
+      <SimpleLineChart 
+        data={chartData.rawData} 
+        width={width - 40} 
+        height={220} 
+      />
+    );
+  };
 
   if (loading) {
     return (
@@ -116,20 +190,30 @@ export default function CompanyOverviewScreen({ route, navigation }) {
         </View>
       </View>
 
-      {/* Chart Placeholder */}
+      {/* Interactive Price Chart */}
       <View style={styles.chartContainer}>
-        <Text style={styles.chartTitle}>Price Chart</Text>
-        <View style={styles.chartPlaceholder}>
-          <Ionicons name="trending-up" size={40} color="#ccc" />
-          <Text style={styles.chartPlaceholderText}>Chart data will be displayed here</Text>
+        <View style={styles.chartHeader}>
+          <Text style={styles.chartTitle}>Price Chart</Text>
+          <TouchableOpacity onPress={refreshChart} disabled={chartLoading}>
+            <Ionicons 
+              name="refresh" 
+              size={20} 
+              color={chartLoading ? '#ccc' : '#00D09C'} 
+            />
+          </TouchableOpacity>
         </View>
+        
+        {renderChart()}
         
         {/* Time Period Buttons */}
         <View style={styles.periodButtons}>
-          {['1W', '1M', '3M', '6M', '1Y', '5Y'].map((period) => (
-            <TouchableOpacity key={period} style={styles.periodButton}>
-              <Text style={styles.periodButtonText}>{period}</Text>
-            </TouchableOpacity>
+          {periods.map((period) => (
+            <PeriodButton
+              key={period}
+              period={period}
+              isSelected={selectedPeriod === period}
+              onPress={changePeriod}
+            />
           ))}
         </View>
       </View>
@@ -239,6 +323,14 @@ const styles = StyleSheet.create({
   wishlistButton: {
     marginRight: 16,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  refreshButton: {
+    marginRight: 12,
+    padding: 4,
+  },
   header: {
     backgroundColor: '#fff',
     padding: 20,
@@ -304,10 +396,58 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   chartTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
+  },
+  chartLoadingContainer: {
+    height: 220,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chartLoadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+  },
+  chartErrorContainer: {
+    height: 220,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chartErrorText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#FF4444',
+    marginTop: 12,
+  },
+  chartErrorSubtext: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 4,
     marginBottom: 16,
+  },
+  chartRetryButton: {
+    backgroundColor: '#00D09C',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  chartRetryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   chartPlaceholder: {
     height: 200,
@@ -316,11 +456,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
     borderRadius: 8,
     marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#00D09C',
+    borderStyle: 'dashed',
   },
   chartPlaceholderText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 16,
+    color: '#00D09C',
+    fontWeight: '600',
     marginTop: 8,
+  },
+  chartPlaceholderSubtext: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  viewDetailsButton: {
+    backgroundColor: '#00D09C',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  viewDetailsButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
   },
   periodButtons: {
     flexDirection: 'row',
@@ -334,10 +499,16 @@ const styles = StyleSheet.create({
     minWidth: 40,
     alignItems: 'center',
   },
+  selectedPeriodButton: {
+    backgroundColor: '#00D09C',
+  },
   periodButtonText: {
     fontSize: 12,
     color: '#666',
     fontWeight: '500',
+  },
+  selectedPeriodButtonText: {
+    color: '#fff',
   },
   section: {
     backgroundColor: '#fff',
